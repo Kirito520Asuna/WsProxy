@@ -20,7 +20,7 @@ import javax.annotation.Resource;
  */
 @Tag(name = "消息")
 @RestController
-@RequestMapping("/message/")
+@RequestMapping({"/message/","/message/api/","/message/jwt/" })
 public class MessageController {
 
     @Resource

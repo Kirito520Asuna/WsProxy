@@ -49,7 +49,7 @@ knife4j:
     enable-dynamic-parameter: true
   #swagger
   basic:
-    enable: true
+    enable: false
     username: root
     password: root
 

@@ -33,18 +33,18 @@ springdoc:
       api: true
       jwt: true
       other: true
-  #  group-configs:
-  #    - group: "api"
-  #      paths-to-match: "/api/**"
-  #    - group: "jwt"
-  #      paths-to-match: "/jwt/**"
-  #    - group: "other"
-  #      paths-to-exclude:
-  #        - "/swagger-resources/**"
-  #        - "/v2/api-docs"
-  #        - "/v3/api-docs"
-  #        - "/api/**"
-  #        - "/jwt/**"
+  group-configs:
+      - group: "api"
+        paths-to-match: "/api/**"
+      - group: "jwt"
+        paths-to-match: "/jwt/**"
+      - group: "other"
+        paths-to-exclude:
+          - "/swagger-resources/**"
+          - "/v2/api-docs"
+          - "/v3/api-docs"
+          - "/api/**"
+          - "/jwt/**"
   swagger-ui:
     operations-sorter: alpha
     path: /swagger-ui.html
