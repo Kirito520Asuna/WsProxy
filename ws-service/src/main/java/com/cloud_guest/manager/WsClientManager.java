@@ -46,6 +46,7 @@ public class WsClientManager {
             }
             url = url + "?" + accessTokenName + "=" + token;
         }
+
         send(url, bodyJson);
     }
 
@@ -55,3 +56,6 @@ public class WsClientManager {
         client.send(msg);
     }
 }
+
+
+

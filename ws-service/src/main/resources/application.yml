@@ -1,3 +1,12 @@
+spring:
+  application:
+    name: ws-proxy-service
+  config:
+    import:
+      - optional:file:./application-prod.yml
+  profiles:
+    active: prod
+
 api:
   authorization: token
   common:
