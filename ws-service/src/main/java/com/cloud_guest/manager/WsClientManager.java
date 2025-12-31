@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class WsClientManager {
     private final WsClient client = new WsClient();
-    @Value("${ws.url}")
+    @Value("${ws.url:ws://localhost:8080/ws}")
     private String WS_URL;
     @Value("${ws.access-token-name:access_token}")
     private String accessTokenName;
