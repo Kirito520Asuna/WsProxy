@@ -156,11 +156,11 @@ jobs:
       - name: 12.上传 ZIP 到 GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          name: jar-files
           files: |
             jars-${{ env.TAG_NAME }}.zip
             extracted-jars/*.jar
           tag_name: ${{ env.TAG_NAME }}
-          name: Release ${{ env.TAG_NAME }} ${{ env.DRAFT == true && '(Draft)' || '' }} ${{ env.PRERELEASE == true && '(Pre-release)' || '' }}
           body: |
             **Release 信息**
             - 标签: ${{ env.TAG_NAME }}
