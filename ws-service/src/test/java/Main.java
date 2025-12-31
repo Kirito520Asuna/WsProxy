@@ -1,5 +1,3 @@
-package com.cloud_guest;
-
 import cn.hutool.http.HttpUtil;
 import cn.hutool.json.JSONUtil;
 import com.cloud_guest.domain.WsProxy;
@@ -12,10 +10,10 @@ import com.cloud_guest.domain.WsProxy;
 public class Main {
     public static void main(String[] args) {
         WsProxy wsProxy = new WsProxy();
-        String action = "send_private_msg";
+        String action = "send_private_msg";//私发 //send_group_msg //群发
         String userId = "xxxxxx";
         String test = "xxxxxx";
-        String type = "text";
+        String type = "text";//
         String body = "{\n" +
                 "        \"action\": \"" + action + "\",\n" +
                 "        \"params\": {\n" +
