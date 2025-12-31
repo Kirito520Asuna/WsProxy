@@ -4,7 +4,8 @@ on:
   workflow_run:
     workflows: ["Java Jar To Zip Publish"]
     types:
-      - completed  # 当工作流完成时触发]
+      - success  # 当工作流成功时触发
+#      - completed  # 当工作流完成时触发]
   # 也可以手动触发
   workflow_dispatch:
     inputs:
