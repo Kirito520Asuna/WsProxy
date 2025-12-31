@@ -1,5 +1,6 @@
 package com.cloud_guest.domain;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -25,5 +26,6 @@ public class WsProxy {
     @Schema(description = "token")
     private String token;
     @Schema(description = "消息体")
+    @JsonProperty("bodyJson")
     private String bodyJson;
 }
