@@ -3,7 +3,8 @@ name: Docker Build and Push
 on:
   workflow_run:
     workflows: ["Java Jar To Zip Publish"]
-    types: [success]
+    types:
+      - completed  # 当工作流完成时触发]
   # 也可以手动触发
   workflow_dispatch:
     inputs:
