@@ -68,8 +68,8 @@ jobs:
         run: |
           TAG_NAME="${{ github.event.inputs.tag_name || github.ref_name }}"
           SKIP_TESTS="${{ github.event.inputs.skip_tests || true }}"
-          JAVA_VERSION="${{ github.event.inputs.java_version ||secrets.JAVA_VERSION|| '17' }}"
-          JAR_DIR_PREFIX="${{ github.event.inputs.jar_dir_prefix || 'micro-service' }}"
+          JAVA_VERSION="${{ github.event.inputs.java_version ||secrets.JAVA_VERSION|| '8' }}"
+          JAR_DIR_PREFIX="${{ github.event.inputs.jar_dir_prefix || 'ws-service' }}"
           DRAFT="${{ github.event.inputs.draft || false }}"
           PRERELEASE="${{ github.event.inputs.prerelease || false }}"
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
