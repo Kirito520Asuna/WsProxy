@@ -156,7 +156,7 @@ jobs:
       - name: 12.上传 ZIP 到 GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: jar-files
+          name: ${{ env.TAG_NAME }}
           files: |
             jars-${{ env.TAG_NAME }}.zip
             extracted-jars/*.jar
@@ -172,3 +172,9 @@ jobs:
           prerelease: ${{ env.PRERELEASE == true || false }}
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
+      # 在步骤 12 之后添加新的 artifact 上传步骤
+      - name: Upload JAR files as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jar-files
+          path: extracted-jars/*.jar
