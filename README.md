@@ -27,7 +27,7 @@ java -jar ws-proxy.jar
 ### docker
 ```shell
 docker pull ghcr.io/kirito520asuna/wsproxy:latest
-docker run -d -p 8081:8081 --name wsproxy ghcr.io/kirito520asuna/wsproxy:latest
+docker run -d -p 8081:8081 -v /path/to/application-prod.yml:/app/application-prod.yml --name wsproxy ghcr.io/kirito520asuna/wsproxy:latest
 ```
 ```shell
 # 在 docker-compose.yml 文件所在目录执行
@@ -49,6 +49,8 @@ services:
       - WS_URL=ws://backend-service:8080/ws  # 连接后端服务
       - ACCESS_TOKEN_NAME=access-token
       - SPRING_PROFILES_ACTIVE=prod
+    volumes:
+      - /path/to/application-prod.yml:/app/application-prod.yml
     networks:
       - wsproxy-network
     restart: unless-stopped
