@@ -216,7 +216,8 @@ jobs:
 
       # 登录到 GitHub Container Registry
       - name: Log in to Container Registry
-        if: ${{ inputs.push_to_registry == true }}
+#        if: ${{ inputs.push_to_registry == true }}
+        if: ${{ github.event_name == 'push' || inputs.push_to_registry == true }}
         uses: docker/login-action@v2
         with:
           registry: ${{ env.REGISTRY }}
@@ -230,11 +231,9 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ github.ref_name }}
+            type=raw,value=latest
+
 
       # 构建并推送 Docker 镜像
       - name: Build and push Docker image
