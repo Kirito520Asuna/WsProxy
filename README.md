@@ -50,7 +50,7 @@ Content-Type: application/json
 
 
 ###
-POST http://localhost:8081/ws-proxy/message/api/send
+POST http://localhost:8081/ws-proxy/api/message/send
 Content-Type: application/json
 
 {
@@ -60,7 +60,7 @@ Content-Type: application/json
 }
 
 ###
-POST http://localhost:8081/ws-proxy/message/jwt/send
+POST http://localhost:8081/ws-proxy/jwt/message/send
 Content-Type: application/json
 
 {
