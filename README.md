@@ -29,6 +29,34 @@ java -jar ws-proxy.jar
 docker pull ghcr.io/kirito520asuna/wsproxy:latest
 docker run -d -p 8081:8081 --name wsproxy ghcr.io/kirito520asuna/wsproxy:latest
 ```
+```shell
+# 在 docker-compose.yml 文件所在目录执行
+docker-compose up -d
+```
+
+```yml
+version: '3.8'
+
+services:
+  wsproxy:
+    image: ghcr.io/kirito520asuna/wsproxy:latest
+    container_name: wsproxy
+    ports:
+      - "8080:8080"
+    environment:
+      - SERVER_PORT=8080
+      - SERVER_SERVLET_CONTEXT_PATH=/ws-proxy
+      - WS_URL=ws://backend-service:8080/ws  # 连接后端服务
+      - ACCESS_TOKEN_NAME=access-token
+      - SPRING_PROFILES_ACTIVE=prod
+    networks:
+      - wsproxy-network
+    restart: unless-stopped
+networks:
+  wsproxy-network:
+    driver: bridge
+
+```
 ## swagger 文档地址
 ```text
 默认地址：http://localhost:8081/ws-proxy/doc.html
