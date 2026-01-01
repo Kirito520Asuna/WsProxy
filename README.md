@@ -27,7 +27,7 @@ java -jar ws-proxy.jar
 ### docker
 ```shell
 docker pull ghcr.io/kirito520asuna/wsproxy:latest
-docker run -d -p 8081:8081 ghcr.io/kirito520asuna/wsproxy:latest
+docker run -d -p 8081:8081 --name wsproxy ghcr.io/kirito520asuna/wsproxy:latest
 ```
 ## swagger 文档地址
 ```text
