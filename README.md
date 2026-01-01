@@ -17,7 +17,7 @@ server:
     context-path: /ws-proxy
 ws:
   url: ws://localhost:8081/ws #可忽略
-  accessTokenName: access-token   
+  access-token-name: access-token   
 ```
 ### 3. 运行
 ```shell
