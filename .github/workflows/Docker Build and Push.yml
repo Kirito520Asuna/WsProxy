@@ -40,10 +40,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: jar-files
-          path: ./target
+          path: ./
 
       - name: List downloaded files
-        run: ls -la ./target/
+        run: ls -la ./
 
       # 设置 Docker Buildx
       - name: Set up Docker Buildx
@@ -83,7 +83,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            JAR_FILE_PATH=./target/*.jar
+            JAR_FILE_PATH=./*.jar
 
       # 验证构建的镜像
       - name: Verify Docker image
