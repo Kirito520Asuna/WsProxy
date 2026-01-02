@@ -94,8 +94,8 @@ jobs:
           JAR_DIR_PREFIX="${{ github.event.inputs.jar_dir_prefix || 'ws-service' }}"
           DRAFT="${{ github.event.inputs.draft || false }}"
           PRERELEASE="${{ github.event.inputs.prerelease || false }}" 
-          PUSH_TO_REGISTRY="${{ github.event.inputs.push_to_registry  || $AUTO }}"
-          PUSH_TO_GITHUB_RELEASE="${{ github.event.inputs.push_to_github_release  || $AUTO  }}"
+          PUSH_TO_REGISTRY="${{ github.event.inputs.push_to_registry  || env.AUTO }}"
+          PUSH_TO_GITHUB_RELEASE="${{ github.event.inputs.push_to_github_release  ||  env.AUTO  }}"
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
           echo "SKIP_TESTS=$SKIP_TESTS" >> $GITHUB_ENV
           echo "JAVA_VERSION=$JAVA_VERSION" >> $GITHUB_ENV
@@ -181,61 +181,61 @@ jobs:
 
       - name: 11.5 将 JAR 文件转换为 EXE
         run: |
-            # 安装 Launch4j
-            sudo apt-get update
-            sudo apt-get install -y launch4j
-        
-            # 创建 EXE 生成脚本
-            for jar_file in extracted-jars/*.jar; do
-              if [ -f "$jar_file" ]; then
-                jar_name=$(basename "$jar_file" .jar)
-            
-                # 从 JAR 的 MANIFEST.MF 中提取主类
-                main_class=$(unzip -p "$jar_file" META-INF/MANIFEST.MF | grep "Main-Class" | cut -d' ' -f2 | tr -d '\r\n')
-            
-                if [ -n "$main_class" ]; then
-                  config_file="/tmp/${jar_name}_launch4j.xml"
-            
-                  # 创建 Launch4j 配置
-                  cat > "$config_file" << EOF
-                  <launch4jConfig>
-                    <headerType>gui</headerType>
-                    <jar>$jar_file</jar>
-                    <outfile>extracted-jars/${jar_name}.exe</outfile>
-                    <classPath>
-                      <mainClass>$main_class</mainClass>
-                    </classPath>
-                    <jre>
-                      <minVersion>${{ env.JAVA_VERSION }}.0</minVersion>
-                    </jre>
-                    <versionInfo>
-                      <fileVersion>${TAG_NAME#v}</fileVersion>
-                      <txtFileVersion>${TAG_NAME}</txtFileVersion>
-                      <fileDescription>WsProxy Application</fileDescription>
-                      <copyright>Copyright (c) 2023</copyright>
-                      <productVersion>${TAG_NAME#v}</productVersion>
-                      <txtProductVersion>${TAG_NAME}</txtProductVersion>
-                      <productName>WsProxy</productName>
-                    </versionInfo>
-                  </launch4jConfig>
-                  EOF
-            
-                  # 生成 EXE
-                  launch4jc "$config_file"
-            
-                  if [ -f "extracted-jars/${jar_name}.exe" ]; then
-                    echo "✅ 成功创建 EXE: extracted-jars/${jar_name}.exe"
-                  else
-                    echo "❌ 创建 EXE 失败: $jar_file"
-                  fi
+          # 安装 Launch4j
+          sudo apt-get update
+          sudo apt-get install -y launch4j
+          
+          # 创建 EXE 生成脚本
+          for jar_file in extracted-jars/*.jar; do
+            if [ -f "$jar_file" ]; then
+              jar_name=$(basename "$jar_file" .jar)
+          
+              # 从 JAR 的 MANIFEST.MF 中提取主类
+              main_class=$(unzip -p "$jar_file" META-INF/MANIFEST.MF | grep "Main-Class" | cut -d' ' -f2 | tr -d '\r\n')
+          
+              if [ -n "$main_class" ]; then
+                config_file="/tmp/${jar_name}_launch4j.xml"
+          
+                # 创建 Launch4j 配置
+                cat > "$config_file" << EOF
+                <launch4jConfig>
+                  <headerType>gui</headerType>
+                  <jar>$jar_file</jar>
+                  <outfile>extracted-jars/${jar_name}.exe</outfile>
+                  <classPath>
+                    <mainClass>$main_class</mainClass>
+                  </classPath>
+                  <jre>
+                    <minVersion>${{ env.JAVA_VERSION }}.0</minVersion>
+                  </jre>
+                  <versionInfo>
+                    <fileVersion>${TAG_NAME#v}</fileVersion>
+                    <txtFileVersion>${TAG_NAME}</txtFileVersion>
+                    <fileDescription>WsProxy Application</fileDescription>
+                    <copyright>Copyright (c) 2023</copyright>
+                    <productVersion>${TAG_NAME#v}</productVersion>
+                    <txtProductVersion>${TAG_NAME}</txtProductVersion>
+                    <productName>WsProxy</productName>
+                  </versionInfo>
+                </launch4jConfig>
+                EOF
+          
+                # 生成 EXE
+                launch4jc "$config_file"
+          
+                if [ -f "extracted-jars/${jar_name}.exe" ]; then
+                  echo "✅ 成功创建 EXE: extracted-jars/${jar_name}.exe"
                 else
-                  echo "⚠️ 无法从 $jar_file 中提取主类，跳过 EXE 生成"
+                  echo "❌ 创建 EXE 失败: $jar_file"
                 fi
+              else
+                echo "⚠️ 无法从 $jar_file 中提取主类，跳过 EXE 生成"
               fi
-            done
-            
-            echo "生成的 EXE 文件:"
-            ls -la extracted-jars/*.exe
+            fi
+          done
+          
+          echo "生成的 EXE 文件:"
+          ls -la extracted-jars/*.exe
         shell: bash
 
       - name: 12.上传 ZIP 到 GitHub Release
