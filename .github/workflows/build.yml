@@ -370,7 +370,7 @@ jobs:
             jars-${{ env.TAG_NAME }}.zip
             extracted-jars/*.jar
             extracted-jars/*.exe
-            WsProxy-Windows-${{ env.TAG_NAME }}.zip        # 新增：独立运行包
+            WsProxy-Windows-${{ env.TAG_NAME }}.zip
           body: |
             **Release 信息**
             - 标签: ${{ env.TAG_NAME }}
