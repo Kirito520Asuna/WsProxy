@@ -323,24 +323,8 @@ jobs:
           # 清理临时文件
           rm -rf /tmp/launch4j /tmp/launch4j.tgz /tmp/jre.zip /tmp/jdk-* /tmp/launch4j_*_config.xml
         shell: bash
-
-      - name: 14. 打包仅含 EXE + JRE 的独立运行包
-        run: |
-          # 创建临时目录，只放入 EXE 和 jre 文件夹
-          mkdir -p standalone-package
-          cp extracted-jars/*.exe standalone-package/ 2>/dev/null || echo "无 EXE 文件"
-          cp -r extracted-jars/jre standalone-package/ 2>/dev/null || echo "无 jre 文件夹"
-
-          # 打成 ZIP
-          cd standalone-package
-          zip -r ../WsProxy-Windows-${{ env.TAG_NAME }}.zip ./*
-          cd ..
-
-          echo "✅ 独立运行包打包完成: WsProxy-Windows-${{ env.TAG_NAME }}.zip"
-          ls -lh WsProxy-Windows-${{ env.TAG_NAME }}.zip
-          du -sh WsProxy-Windows-${{ env.TAG_NAME }}.zip
           
-      - name: 14. 打包仅含 EXE + JRE + 配置文件的独立运行包
+      - name: 13. 打包仅含 EXE + JRE + 配置文件的独立运行包
         run: |
           # 创建临时打包目录
           mkdir -p standalone-package
@@ -376,7 +360,7 @@ jobs:
           ls -lh WsProxy-Windows-${{ env.TAG_NAME }}.zip
           du -sh WsProxy-Windows-${{ env.TAG_NAME }}.zip     
 
-      - name: 15. 上传到 GitHub Release（包含独立 EXE 包）
+      - name: 14. 上传到 GitHub Release（包含独立 EXE 包）
         uses: softprops/action-gh-release@v2
         if: ${{ inputs.push_to_github_release == true }}
         with:
