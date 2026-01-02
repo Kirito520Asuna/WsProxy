@@ -276,38 +276,69 @@ jobs:
           rm -rf /tmp/launch4j /tmp/launch4j.tgz /tmp/launch4j_*_config.xml
         shell: bash
 
-      - name: 13.上传 ZIP 到 GitHub Release
+      - name: 14. 打包仅含 EXE + JRE 的独立运行包
+        run: |
+          # 创建临时目录，只放入 EXE 和 jre 文件夹
+          mkdir -p standalone-package
+          cp extracted-jars/*.exe standalone-package/ 2>/dev/null || echo "无 EXE 文件"
+          cp -r extracted-jars/jre standalone-package/ 2>/dev/null || echo "无 jre 文件夹"
+
+          # 打成 ZIP
+          cd standalone-package
+          zip -r ../WsProxy-${{ env.TAG_NAME }}.exe.zip ./*
+          cd ..
+
+          echo "✅ 独立运行包打包完成: WsProxy-${{ env.TAG_NAME }}.exe.zip"
+          ls -lh WsProxy-${{ env.TAG_NAME }}.exe.zip
+          du -sh WsProxy-${{ env.TAG_NAME }}.exe.zip
+
+      - name: 15. 上传到 GitHub Release（包含独立 EXE 包）
         uses: softprops/action-gh-release@v2
-        if: ${{ inputs.push_to_github_release == true  }}
+        if: ${{ inputs.push_to_github_release == true }}
         with:
           name: ${{ env.TAG_NAME }}
+          tag_name: ${{ env.TAG_NAME }}
           files: |
             jars-${{ env.TAG_NAME }}.zip
             extracted-jars/*.jar
             extracted-jars/*.exe
-          tag_name: ${{ env.TAG_NAME }}
+            WsProxy-${{ env.TAG_NAME }}.exe.zip        # 新增：独立运行包
           body: |
             **Release 信息**
             - 标签: ${{ env.TAG_NAME }}
             - Java 版本: ${{ env.JAVA_VERSION}}
-          #            - 是否跳过测试: ${{ github.event.inputs.skip_tests == 'true' && '是' || '否' }}
-          #            - Draft 状态: ${{ github.event.inputs.draft == 'true' && '是' || '否' }}
-          #            - Pre-release 状态: ${{ github.event.inputs.prerelease == 'true' && '是' || '否' }}
+            **WsProxy ${{ env.TAG_NAME }} 发布**
+
+            ### 🏆 推荐下载（完全独立运行，无需安装 Java）
+            - **WsProxy-${{ env.TAG_NAME }}.exe.zip**  
+              → 解压后直接双击 `.exe` 文件运行（已内置 Java 运行时）
+
+            ### 📦 其他文件
+            - `jars-${{ env.TAG_NAME }}.zip`：原始 JAR 包
+            - 单个 `.jar` 文件：供开发者使用
+            - 单个 `.exe` 文件：仅 EXE（需系统已安装 Java ${{ env.JAVA_VERSION}}）
+
+            **系统要求**：Windows 10/11 x64  
+            **运行方式**：推荐使用独立包，双击即跑
+
+            如有问题欢迎反馈！
           draft: ${{ env.DRAFT == true || false }}
           prerelease: ${{ env.PRERELEASE == true || false }}
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
+
       # 在步骤 之后添加新的 artifact 上传步骤
       - name: Upload JAR files as artifact
         uses: actions/upload-artifact@v4
         with:
           name: jar-files
           path: extracted-jars/*.jar
-      - name: Upload EXE files as artifact
+
+      - name: 上传独立 EXE 包作为 Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: exe-files
-          path: extracted-jars/*.exe
+          name: WsProxy-Standalone-EXE
+          path: WsProxy-${{ env.TAG_NAME }}.exe.zip
 
   build-and-push:
     runs-on: ubuntu-latest
