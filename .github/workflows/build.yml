@@ -303,12 +303,12 @@ jobs:
 
           # 打成 ZIP
           cd standalone-package
-          zip -r ../WsProxy-${{ env.TAG_NAME }}.exe.zip ./*
+          zip -r ../WsProxy-${{ env.TAG_NAME }}-win.zip ./*
           cd ..
 
-          echo "✅ 独立运行包打包完成: WsProxy-${{ env.TAG_NAME }}.exe.zip"
-          ls -lh WsProxy-${{ env.TAG_NAME }}.exe.zip
-          du -sh WsProxy-${{ env.TAG_NAME }}.exe.zip
+          echo "✅ 独立运行包打包完成: WsProxy-${{ env.TAG_NAME }}-win.zip"
+          ls -lh WsProxy-${{ env.TAG_NAME }}-win.zip
+          du -sh WsProxy-${{ env.TAG_NAME }}-win.zip
 
       - name: 15. 上传到 GitHub Release（包含独立 EXE 包）
         uses: softprops/action-gh-release@v2
@@ -320,7 +320,7 @@ jobs:
             jars-${{ env.TAG_NAME }}.zip
             extracted-jars/*.jar
             extracted-jars/*.exe
-            WsProxy-${{ env.TAG_NAME }}.exe.zip        # 新增：独立运行包
+            WsProxy-${{ env.TAG_NAME }}-win.zip        # 新增：独立运行包
           body: |
             **Release 信息**
             - 标签: ${{ env.TAG_NAME }}
@@ -328,7 +328,7 @@ jobs:
             **WsProxy ${{ env.TAG_NAME }} 发布**
 
             ### 🏆 推荐下载（完全独立运行，无需安装 Java）
-            - **WsProxy-${{ env.TAG_NAME }}.exe.zip**  
+            - **WsProxy-${{ env.TAG_NAME }}-win.zip**  
               → 解压后直接双击 `.exe` 文件运行（已内置 Java 运行时）
 
             ### 📦 其他文件
@@ -356,7 +356,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: WsProxy-Standalone-EXE
-          path: WsProxy-${{ env.TAG_NAME }}.exe.zip
+          path: WsProxy-${{ env.TAG_NAME }}-win.zip
 
   build-and-push:
     if: ${{ github.event_name == 'push' || inputs.push_to_registry == true }}
