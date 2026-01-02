@@ -197,34 +197,55 @@ jobs:
           ln -sf /usr/bin/i686-w64-mingw32-windres /tmp/launch4j/bin/windres
           ln -sf /usr/bin/i686-w64-mingw32-ld /tmp/launch4j/bin/ld
 
-          # ============ 下载并捆绑私有 JRE（动态获取最新 Java 8 Windows x64 JRE ZIP） ============
-          echo "📦 正在动态获取 Adoptium Temurin Java 8 最新 JRE (Windows x64)"
+          # ============ 下载并捆绑私有 JRE（安全提取 jre 子目录） ============
+          echo "📦 正在下载 Adoptium Temurin Java 8 最新 JDK (Windows x64，用于提取 jRE)"
 
-          # 使用 Adoptium API 获取最新 Java 8 JRE ZIP 的直接下载链接
-          API_URL="https://api.adoptium.net/v3/assets/latest/8/hotspot?image_type=jre&os=windows&arch=x64&vendor=adoptium"
+          sudo apt-get install -y jq  # 用于 API 解析
+
+          API_URL="https://api.adoptium.net/v3/assets/latest/8/hotspot?image_type=jdk&os=windows&arch=x64&vendor=adoptium"
 
           DOWNLOAD_URL=$(curl -s "$API_URL" | jq -r '.[0].binary.package.link')
 
           if [ -z "$DOWNLOAD_URL" ] || [ "$DOWNLOAD_URL" = "null" ]; then
-            echo "❌ API 未返回有效下载链接，请检查 Java 8 是否仍有 JRE ZIP 包"
-            echo "API 响应:"
-            curl -s "$API_URL" | jq .
+            echo "⚠️ API 未返回链接，使用兜底版本（2026年1月最新 jdk8u482-b07）"
+            DOWNLOAD_URL="https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u482-b07/OpenJDK8U-jdk_x64_windows_hotspot_8u482b07.zip"
+          fi
+
+          echo "✅ 下载链接: $DOWNLOAD_URL"
+          wget -q "$DOWNLOAD_URL" -O /tmp/jdk.zip
+
+          # 生成随机临时目录解压，避免 /tmp 污染
+          TEMP_EXTRACT_DIR=$(mktemp -d /tmp/jdk_extract_XXXXXX)
+          echo "🗂️ 解压到临时目录: $TEMP_EXTRACT_DIR"
+
+          unzip -q /tmp/jdk.zip -d "$TEMP_EXTRACT_DIR"
+
+          # 找到解压后的唯一根目录（JDK 包总是只有一个子目录）
+          JDK_ROOT_DIR=$(find "$TEMP_EXTRACT_DIR" -mindepth 1 -maxdepth 1 -type d | head -1)
+
+          if [ -z "$JDK_ROOT_DIR" ]; then
+            echo "❌ 未找到 JDK 根目录"
+            ls -la "$TEMP_EXTRACT_DIR"
             exit 1
           fi
 
-          echo "✅ 获取到下载链接: $DOWNLOAD_URL"
-          wget -q "$DOWNLOAD_URL" -O /tmp/jre.zip
+          # 找到 jre 子目录（Java 8 固定叫 jre）
+          JRE_SOURCE_DIR="$JDK_ROOT_DIR/jre"
 
-          # 解压并重命名
-          unzip -q /tmp/jre.zip -d /tmp
-          JRE_DIR=$(find /tmp -maxdepth 1 -type d -name "jdk-8*" -o -name "OpenJDK8U-jre*" | head -1)
-          if [ -z "$JRE_DIR" ]; then
-            echo "❌ 解压后未找到 JRE 目录"
-            ls -la /tmp
+          if [ ! -d "$JRE_SOURCE_DIR" ]; then
+            echo "❌ JDK 根目录下未找到 jre 子目录（结构异常）"
+            ls -la "$JDK_ROOT_DIR"
             exit 1
           fi
-          mv "$JRE_DIR" extracted-jars/jre
-          echo "✅ 私有 JRE 已捆绑到 extracted-jars/jre/ （大小: $(du -sh extracted-jars/jre | cut -f1)）"
+
+          # 移动到目标位置，重命名为标准 jre
+          mkdir -p extracted-jars
+          mv "$JRE_SOURCE_DIR" extracted-jars/jre
+
+          echo "✅ 私有 JRE 已成功提取并捆绑到 extracted-jars/jre/ （大小: $(du -sh extracted-jars/jre | cut -f1)）"
+
+          # 清理临时文件
+          rm -rf "$TEMP_EXTRACT_DIR" /tmp/jdk.zip
 
           # ============ 版本处理 ============
           RAW_TAG=${TAG_NAME#v}
