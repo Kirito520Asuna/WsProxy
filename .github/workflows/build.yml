@@ -179,10 +179,9 @@ jobs:
           echo "解压后的文件:"
           ls -la extracted-jars
 
-
-      - name: 11.5 将 JAR 文件转换为 EXE（headless launch4j.jar 版本 - 完整可靠）
+      - name: 11.5 将 JAR 文件转换为 EXE（headless launch4j.jar 版本 - console 模式）
         run: |
-          # 下载和准备（不变）
+          # 下载 Launch4j（不变）
           wget --tries=5 --timeout=60 \
             https://pilotfiber.dl.sourceforge.net/project/launch4j/launch4j-3/3.50/launch4j-3.50-linux-x64.tgz?viasf=1 \
             -O /tmp/launch4j.tgz || \
@@ -191,42 +190,34 @@ jobs:
             -O /tmp/launch4j.tgz
 
           tar -xzf /tmp/launch4j.tgz -C /tmp
+
+          # 安装 32-bit MinGW 工具链（关键）
           sudo apt-get update
-          sudo apt-get install -y mingw-w64
-          ln -sf /usr/bin/x86_64-w64-mingw32-windres /tmp/launch4j/bin/windres
-          ln -sf /usr/bin/x86_64-w64-mingw32-ld /tmp/launch4j/bin/ld
+          sudo apt-get install -y mingw-w64 g++-mingw-w64-i686 gcc-mingw-w64-i686 binutils-mingw-w64-i686 libc6-i386 libstdc++6:i386
+
+          # 替换为系统 32-bit 工具
+          ln -sf /usr/bin/i686-w64-mingw32-windres /tmp/launch4j/bin/windres
+          ln -sf /usr/bin/i686-w64-mingw32-ld /tmp/launch4j/bin/ld
 
           dir=$(pwd)
           cd /tmp/launch4j && echo "解压文件列表:" && ls && cd "$dir"
 
-          # 提取并标准化版本（支持 v0.0.1 → 0.0.1.0；v1.2.3.4 → 1.2.3.4）
-          RAW_TAG=${TAG_NAME#v}  # 去掉 v 前缀
-          RAW_TAG=${RAW_TAG:-0.0.1}  # fallback
-
-          # 关键：只保留数字和点，其他全部删除
+          # 版本净化处理（不变）
+          RAW_TAG=${TAG_NAME#v}
+          RAW_TAG=${RAW_TAG:-0.0.1}
           CLEAN_VERSION=$(echo "$RAW_TAG" | sed 's/[^0-9.]//g')
-      
-          # 可选：防止开头是 . 或连续多个 ..
           CLEAN_VERSION=$(echo "$CLEAN_VERSION" | sed 's/^\.*//; s/\.*$//; s/\.\.+/\./g')
-      
-          # 如果净化后为空，fallback 到 0.0.1
           CLEAN_VERSION=${CLEAN_VERSION:-0.0.1}
-      
           echo "🛠️ 原始 TAG: $TAG_NAME → 净化后版本字符串: $CLEAN_VERSION"
-      
-          # 分割成数组并补齐到四个部分
-          IFS='.' read -r -a parts <<< "$CLEAN_VERSION"
 
-          # 补齐到四个部分
+          IFS='.' read -r -a parts <<< "$CLEAN_VERSION"
           major=${parts[0]:-0}
           minor=${parts[1]:-0}
           patch=${parts[2]:-0}
           build=${parts[3]:-0}
-
           FILE_VERSION="$major.$minor.$patch.$build"
-          TXT_VERSION="${TAG_NAME:-v$major.$minor.$patch}"  # txt 可带 v
-
-          echo "🛠️ 版本处理: TAG_NAME=$TAG_NAME → FileVersion=$FILE_VERSION, TxtVersion=$TXT_VERSION"
+          TXT_VERSION="${TAG_NAME:-v$major.$minor.$patch}"
+          echo "🛠️ 版本处理: FileVersion=$FILE_VERSION, TxtVersion=$TXT_VERSION"
 
           for jar_file in extracted-jars/*.jar; do
             [ -f "$jar_file" ] || continue
@@ -234,14 +225,13 @@ jobs:
             exe_output="extracted-jars/${jar_name}.exe"
 
             main_class=$(unzip -p "$jar_file" META-INF/MANIFEST.MF | grep '^Main-Class:' | sed 's/^Main-Class: *//' | tr -d '\r')
-
             [ -z "$main_class" ] && echo "⚠️ $jar_file 无 Main-Class，跳过" && continue
 
             config_file="/tmp/${jar_name}_config.xml"
             cat > "$config_file" << EOF
           <launch4jConfig>
             <dontWrapJar>false</dontWrapJar>
-            <headerType>console</headerType>    <!--gui 如需控制台窗口改为 console -->
+            <headerType>console</headerType>    <!-- 已改为 console，运行时会显示黑窗口 -->
             <jar>$jar_file</jar>
             <outfile>$exe_output</outfile>
             <errTitle>WsProxy Error</errTitle>
@@ -260,22 +250,20 @@ jobs:
               <fileDescription>WsProxy Application</fileDescription>
               <copyright>Copyright (c) 2023</copyright>
               <productName>WsProxy</productName>
-              <internalName>${jar_name}</internalName>    <!-- 新增：用 JAR 基础名（即 EXE 名无后缀） -->
+              <internalName>${jar_name}</internalName>
               <originalFilename>${jar_name}.exe</originalFilename>
             </versionInfo>
           </launch4jConfig>
           EOF
 
-            echo "✅ 使用 headless 模式生成 $exe_output (版本: $FILE_VERSION)"
+            echo "✅ 使用 headless 模式生成 $exe_output (版本: $FILE_VERSION, console 模式)"
             java -Djava.awt.headless=true -jar /tmp/launch4j/launch4j.jar "$config_file"
 
             if [ -f "$exe_output" ]; then
               echo "✅ 成功生成: $exe_output"
             else
               echo "❌ 生成失败: $jar_file"
-              echo "=== 配置内容（调试）==="
               cat "$config_file"
-              echo "=== Launch4j 日志（如果有）==="
               cat /tmp/launch4j/launch4j.log 2>/dev/null || echo "无日志文件"
             fi
           done
