@@ -183,10 +183,14 @@ jobs:
         run: |
           # 使用最稳定的方式下载 Launch4j 3.50 Linux x64 二进制版
           # SourceForge 的 /download 后缀有时不稳定，使用重定向安全的 mirrors 链接
-          wget https://downloads.sourceforge.net/project/launch4j/launch4j-3/3.50/launch4j-3.50-linux.tgz?viasf=1 -O /tmp/launch4j.tgz
+          wget https://pilotfiber.dl.sourceforge.net/project/launch4j/launch4j-3/3.50/launch4j-3.50-linux-x64.tgz?viasf=1 -O /tmp/launch4j.tgz
           # 解压到 /tmp
           tar -xzf /tmp/launch4j.tgz -C /tmp
-
+          dir=$(pwd)
+          cd /tmp
+          echo "解压后的文件:"
+          ls
+          cd $dir
           # 添加执行权限
           chmod +x /tmp/launch4j/launch4j
 
