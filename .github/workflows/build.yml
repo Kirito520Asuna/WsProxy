@@ -187,7 +187,7 @@ jobs:
           # 解压到 /tmp
           tar -xzf /tmp/launch4j.tgz -C /tmp
           dir=$(pwd)
-          cd /tmp
+          cd /tmp/launch4j
           echo "解压后的文件:"
           ls
           cd $dir
