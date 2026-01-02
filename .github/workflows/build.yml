@@ -197,20 +197,29 @@ jobs:
           ln -sf /usr/bin/i686-w64-mingw32-windres /tmp/launch4j/bin/windres
           ln -sf /usr/bin/i686-w64-mingw32-ld /tmp/launch4j/bin/ld
 
-          # ============ 下载并捆绑私有 JRE（Windows x64） ============
-          echo "📦 正在下载 Adoptium Temurin JRE ${{ env.JAVA_VERSION }} (Windows x64)"
-          # 2026年1月 Adoptium 链接格式（已验证可用）
-          JRE_URL="https://github.com/adoptium/temurin${{ env.JAVA_VERSION }}-binaries/releases/download/jdk-${{ env.JAVA_VERSION }}%2B/latest/OpenJDK${{ env.JAVA_VERSION }}U-jre_x64_windows_hotspot_latest.zip"
+          # ============ 下载并捆绑私有 JRE（动态获取最新 Java 8 Windows x64 JRE ZIP） ============
+          echo "📦 正在动态获取 Adoptium Temurin Java 8 最新 JRE (Windows x64)"
 
-          wget -q "$JRE_URL" -O /tmp/jre.zip || {
-            echo "❌ 下载失败，尝试备用链接"
-            wget -q "https://github.com/adoptium/temurin${{ env.JAVA_VERSION }}-binaries/releases/latest/download/OpenJDK${{ env.JAVA_VERSION }}U-jre_x64_windows_hotspot.zip" -O /tmp/jre.zip
-          }
+          # 使用 Adoptium API 获取最新 Java 8 JRE ZIP 的直接下载链接
+          API_URL="https://api.adoptium.net/v3/assets/latest/8/hotspot?image_type=jre&os=windows&arch=x64&vendor=adoptium"
 
+          DOWNLOAD_URL=$(curl -s "$API_URL" | jq -r '.[0].binary.package.link')
+
+          if [ -z "$DOWNLOAD_URL" ] || [ "$DOWNLOAD_URL" = "null" ]; then
+            echo "❌ API 未返回有效下载链接，请检查 Java 8 是否仍有 JRE ZIP 包"
+            echo "API 响应:"
+            curl -s "$API_URL" | jq .
+            exit 1
+          fi
+
+          echo "✅ 获取到下载链接: $DOWNLOAD_URL"
+          wget -q "$DOWNLOAD_URL" -O /tmp/jre.zip
+
+          # 解压并重命名
           unzip -q /tmp/jre.zip -d /tmp
-          JRE_DIR=$(find /tmp -maxdepth 1 -type d -name "jdk-${{ env.JAVA_VERSION }}*-jre" | head -1)
+          JRE_DIR=$(find /tmp -maxdepth 1 -type d -name "jdk-8*" -o -name "OpenJDK8U-jre*" | head -1)
           if [ -z "$JRE_DIR" ]; then
-            echo "❌ 未找到 JRE 目录"
+            echo "❌ 解压后未找到 JRE 目录"
             ls -la /tmp
             exit 1
           fi
