@@ -209,7 +209,7 @@ jobs:
               cat > "$config_file" << EOF
           <launch4jConfig>
             <dontWrapJar>false</dontWrapJar>
-            <headerType>gui</headerType>    <!-- 如为控制台程序，改为 console -->
+            <headerType>console</headerType>    <!-- gui如为控制台程序，改为 console -->
             <jar>$jar_file</jar>
             <outfile>$exe_output</outfile>
             <classname>$main_class</classname>
