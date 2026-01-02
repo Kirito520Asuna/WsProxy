@@ -181,21 +181,20 @@ jobs:
 
       - name: 11.5 将 JAR 文件转换为 EXE
         run: |
-          # 安装 Launch4j
-          sudo apt-get update
-          sudo apt-get install -y launch4j
-          
-          # 创建 EXE 生成脚本
+          # 下载 Launch4j
+          wget https://github.com/lukaszlenart/launch4j/releases/download/release-3_50_0/launch4j-3.50.0.jar -O /tmp/launch4j.jar
+
+          # 遍历所有 JAR 文件并转换为 EXE
           for jar_file in extracted-jars/*.jar; do
             if [ -f "$jar_file" ]; then
               jar_name=$(basename "$jar_file" .jar)
-          
+
               # 从 JAR 的 MANIFEST.MF 中提取主类
               main_class=$(unzip -p "$jar_file" META-INF/MANIFEST.MF | grep "Main-Class" | cut -d' ' -f2 | tr -d '\r\n')
-          
+
               if [ -n "$main_class" ]; then
                 config_file="/tmp/${jar_name}_launch4j.xml"
-          
+
                 # 创建 Launch4j 配置
                 cat > "$config_file" << EOF
                 <launch4jConfig>
@@ -219,10 +218,10 @@ jobs:
                   </versionInfo>
                 </launch4jConfig>
                 EOF
-          
-                # 生成 EXE
-                launch4jc "$config_file"
-          
+
+                # 使用 Java 运行 Launch4j
+                java -jar /tmp/launch4j.jar "$config_file"
+
                 if [ -f "extracted-jars/${jar_name}.exe" ]; then
                   echo "✅ 成功创建 EXE: extracted-jars/${jar_name}.exe"
                 else
@@ -233,7 +232,7 @@ jobs:
               fi
             fi
           done
-          
+
           echo "生成的 EXE 文件:"
           ls -la extracted-jars/*.exe
         shell: bash
