@@ -179,9 +179,9 @@ jobs:
           echo "解压后的文件:"
           ls -la extracted-jars
 
-      - name: 11.5 将 JAR 文件转换为 EXE（headless launch4j.jar 版本 - console 模式）
+      - name: 11.5 将 JAR 文件转换为 EXE（headless launch4j.jar 版本 - console 模式，最终版）
         run: |
-          # 下载 Launch4j（不变）
+          # 下载 Launch4j
           wget --tries=5 --timeout=60 \
             https://pilotfiber.dl.sourceforge.net/project/launch4j/launch4j-3/3.50/launch4j-3.50-linux-x64.tgz?viasf=1 \
             -O /tmp/launch4j.tgz || \
@@ -191,18 +191,18 @@ jobs:
 
           tar -xzf /tmp/launch4j.tgz -C /tmp
 
-          # 安装 32-bit MinGW 工具链（关键）
+          # 只安装必要的 32-bit MinGW 工具链（不再安装 libstdc++6:i386 或 libc6-i386）
           sudo apt-get update
-          sudo apt-get install -y mingw-w64 g++-mingw-w64-i686 gcc-mingw-w64-i686 binutils-mingw-w64-i686 libc6-i386 libstdc++6:i386
+          sudo apt-get install -y mingw-w64 g++-mingw-w64-i686 gcc-mingw-w64-i686 binutils-mingw-w64-i686
 
-          # 替换为系统 32-bit 工具
+          # 用系统 32-bit MinGW 工具替换 Launch4j 内置的（关键修复 ldscripts 问题）
           ln -sf /usr/bin/i686-w64-mingw32-windres /tmp/launch4j/bin/windres
           ln -sf /usr/bin/i686-w64-mingw32-ld /tmp/launch4j/bin/ld
 
           dir=$(pwd)
           cd /tmp/launch4j && echo "解压文件列表:" && ls && cd "$dir"
 
-          # 版本净化处理（不变）
+          # 版本净化处理
           RAW_TAG=${TAG_NAME#v}
           RAW_TAG=${RAW_TAG:-0.0.1}
           CLEAN_VERSION=$(echo "$RAW_TAG" | sed 's/[^0-9.]//g')
@@ -231,7 +231,7 @@ jobs:
             cat > "$config_file" << EOF
           <launch4jConfig>
             <dontWrapJar>false</dontWrapJar>
-            <headerType>console</headerType>    <!-- 已改为 console，运行时会显示黑窗口 -->
+            <headerType>console</headerType>    <!-- console 模式：运行时显示黑窗口，适合需要日志输出的程序 -->
             <jar>$jar_file</jar>
             <outfile>$exe_output</outfile>
             <errTitle>WsProxy Error</errTitle>
@@ -261,9 +261,12 @@ jobs:
 
             if [ -f "$exe_output" ]; then
               echo "✅ 成功生成: $exe_output"
+              echo "   文件大小: $(du -h "$exe_output" | cut -f1)"
             else
               echo "❌ 生成失败: $jar_file"
+              echo "=== 配置内容（调试）==="
               cat "$config_file"
+              echo "=== Launch4j 日志（如果有）==="
               cat /tmp/launch4j/launch4j.log 2>/dev/null || echo "无日志文件"
             fi
           done
