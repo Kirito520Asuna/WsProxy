@@ -216,58 +216,61 @@ jobs:
           
           # 切换到 extracted-jars 目录运行（关键！确保输出到正确位置）
           cd extracted-jars
-          echo "已切换到 $(pwd)，开始转换所有 JAR 为 EXE"
+          echo "已切换到 $(pwd)，开始转换"
           
           for jar_file in *.jar; do
-            [ -f "$jar_file" ] || { echo "❌ 未找到任何 JAR 文件"; exit 1; }
-            jar_name=$(basename "$jar_file" .jar)
-            exe_file="${jar_name}.exe"
+          [ -f "$jar_file" ] || { echo "❌ 未找到 JAR"; exit 1; }
+          jar_name=$(basename "$jar_file" .jar)
+          exe_file="${jar_name}.exe"
           
-            main_class=$(unzip -p "$jar_file" META-INF/MANIFEST.MF | grep '^Main-Class:' | sed 's/^Main-Class: *//' | tr -d '\r')
-            [ -z "$main_class" ] && echo "⚠️ $jar_file 无 Main-Class，跳过" && continue
+          # 关键修复：计算 JAR 的绝对路径
+          abs_jar_path="$(realpath "$jar_file")"
           
-            config_file="/tmp/launch4j_${jar_name}_config.xml"
-            cat > "$config_file" << EOF
+          main_class=$(unzip -p "$jar_file" META-INF/MANIFEST.MF | grep '^Main-Class:' | sed 's/^Main-Class: *//' | tr -d '\r')
+          [ -z "$main_class" ] && echo "⚠️ $jar_file 无 Main-Class，跳过" && continue
+          
+          config_file="/tmp/launch4j_${jar_name}_config.xml"
+          cat > "$config_file" << EOF
           <launch4jConfig>
-            <dontWrapJar>false</dontWrapJar>
-            <headerType>console</headerType>
-            <jar>$jar_file</jar>
-            <outfile>$exe_file</outfile>
-            <errTitle>WsProxy Error</errTitle>
-            <classPath>
-              <mainClass>$main_class</mainClass>
-            </classPath>
-            <jre>
-              <minVersion>${{ env.JAVA_VERSION }}.0</minVersion>
-              <jdkPreference>preferJre</jdkPreference>
-            </jre>
-            <versionInfo>
-              <fileVersion>$FILE_VERSION</fileVersion>
-              <txtFileVersion>$TXT_VERSION</txtFileVersion>
-              <productVersion>$FILE_VERSION</productVersion>
-              <txtProductVersion>$TXT_VERSION</txtProductVersion>
-              <fileDescription>WsProxy Application</fileDescription>
-              <copyright>Copyright (c) 2023</copyright>
-              <productName>WsProxy</productName>
-              <internalName>${jar_name}</internalName>
-              <originalFilename>${jar_name}.exe</originalFilename>
-            </versionInfo>
+          <dontWrapJar>false</dontWrapJar>
+          <headerType>console</headerType>
+          <jar>$abs_jar_path</jar>          <!-- 这里用绝对路径 -->
+          <outfile>$exe_file</outfile>      <!-- 输出用相对路径（当前目录） -->
+          <errTitle>WsProxy Error</errTitle>
+          <classPath>
+            <mainClass>$main_class</mainClass>
+          </classPath>
+          <jre>
+            <minVersion>${{ env.JAVA_VERSION }}.0</minVersion>
+            <jdkPreference>preferJre</jdkPreference>
+          </jre>
+          <versionInfo>
+            <fileVersion>$FILE_VERSION</fileVersion>
+            <txtFileVersion>$TXT_VERSION</txtFileVersion>
+            <productVersion>$FILE_VERSION</productVersion>
+            <txtProductVersion>$TXT_VERSION</txtProductVersion>
+            <fileDescription>WsProxy Application</fileDescription>
+            <copyright>Copyright (c) 2023</copyright>
+            <productName>WsProxy</productName>
+            <internalName>${jar_name}</internalName>
+            <originalFilename>${jar_name}.exe</originalFilename>
+          </versionInfo>
           </launch4jConfig>
           EOF
           
-            echo "✅ 正在生成 $exe_file (console 模式，版本 $FILE_VERSION)"
-            java -Djava.awt.headless=true -jar /tmp/launch4j/launch4j.jar "$config_file"
+          echo "✅ 正在生成 $exe_file (console 模式，版本 $FILE_VERSION)"
+          java -Djava.awt.headless=true -jar /tmp/launch4j/launch4j.jar "$config_file"
           
-            if [ -f "$exe_file" ]; then
-              echo "🎉 成功生成 EXE: $exe_file"
-              du -h "$exe_file"
-            else
-              echo "❌ 生成失败: $jar_file"
-              cat /tmp/launch4j/launch4j.log 2>/dev/null || echo "无详细日志"
-            fi
+          if [ -f "$exe_file" ]; then
+            echo "🎉🎉🎉 成功生成 EXE: $exe_file"
+            du -h "$exe_file"
+          else
+            echo "❌ 生成失败"
+            cat /tmp/launch4j/launch4j.log 2>/dev/null || true
+          fi
           done
           
-          echo "=== extracted-jars 目录最终内容 ==="
+          echo "=== 最终文件列表 ==="
           ls -lh
           
           # 清理临时文件
