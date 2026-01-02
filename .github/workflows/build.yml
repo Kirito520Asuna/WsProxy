@@ -260,6 +260,7 @@ jobs:
               <fileDescription>WsProxy Application</fileDescription>
               <copyright>Copyright (c) 2023</copyright>
               <productName>WsProxy</productName>
+              <internalName>${jar_name}</internalName>    <!-- 新增：用 JAR 基础名（即 EXE 名无后缀） -->
               <originalFilename>${jar_name}.exe</originalFilename>
             </versionInfo>
           </launch4jConfig>
