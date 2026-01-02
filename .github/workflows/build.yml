@@ -180,7 +180,7 @@ jobs:
           ls -la extracted-jars
 
 
-      - name: 11.5 将 JAR 文件转换为 EXE（headless launch4j.jar 版本 - 修复 3.50 兼容）
+      - name: 11.5 将 JAR 文件转换为 EXE（headless launch4j.jar 版本 - 完整可靠）
         run: |
           # 下载和准备（不变）
           wget --tries=5 --timeout=60 \
@@ -196,11 +196,37 @@ jobs:
           ln -sf /usr/bin/x86_64-w64-mingw32-windres /tmp/launch4j/bin/windres
           ln -sf /usr/bin/x86_64-w64-mingw32-ld /tmp/launch4j/bin/ld
 
-          VERSION=${TAG_NAME#v}
-          VERSION=${VERSION:-1.0.0}
-
           dir=$(pwd)
           cd /tmp/launch4j && echo "解压文件列表:" && ls && cd "$dir"
+
+          # 提取并标准化版本（支持 v0.0.1 → 0.0.1.0；v1.2.3.4 → 1.2.3.4）
+          RAW_TAG=${TAG_NAME#v}  # 去掉 v 前缀
+          RAW_TAG=${RAW_TAG:-0.0.1}  # fallback
+
+          # 关键：只保留数字和点，其他全部删除
+          CLEAN_VERSION=$(echo "$RAW_TAG" | sed 's/[^0-9.]//g')
+      
+          # 可选：防止开头是 . 或连续多个 ..
+          CLEAN_VERSION=$(echo "$CLEAN_VERSION" | sed 's/^\.*//; s/\.*$//; s/\.\.+/\./g')
+      
+          # 如果净化后为空，fallback 到 0.0.1
+          CLEAN_VERSION=${CLEAN_VERSION:-0.0.1}
+      
+          echo "🛠️ 原始 TAG: $TAG_NAME → 净化后版本字符串: $CLEAN_VERSION"
+      
+          # 分割成数组并补齐到四个部分
+          IFS='.' read -r -a parts <<< "$CLEAN_VERSION"
+
+          # 补齐到四个部分
+          major=${parts[0]:-0}
+          minor=${parts[1]:-0}
+          patch=${parts[2]:-0}
+          build=${parts[3]:-0}
+
+          FILE_VERSION="$major.$minor.$patch.$build"
+          TXT_VERSION="${TAG_NAME:-v$major.$minor.$patch}"  # txt 可带 v
+
+          echo "🛠️ 版本处理: TAG_NAME=$TAG_NAME → FileVersion=$FILE_VERSION, TxtVersion=$TXT_VERSION"
 
           for jar_file in extracted-jars/*.jar; do
             [ -f "$jar_file" ] || continue
@@ -215,7 +241,7 @@ jobs:
             cat > "$config_file" << EOF
           <launch4jConfig>
             <dontWrapJar>false</dontWrapJar>
-            <headerType>console</headerType>    <!-- 根据 WsProxy 实际类型：gui（无控制台窗口） 或 console -->
+            <headerType>console</headerType>    <!--gui 如需控制台窗口改为 console -->
             <jar>$jar_file</jar>
             <outfile>$exe_output</outfile>
             <errTitle>WsProxy Error</errTitle>
@@ -227,10 +253,10 @@ jobs:
               <jdkPreference>preferJre</jdkPreference>
             </jre>
             <versionInfo>
-              <fileVersion>${VERSION}.0.0.0</fileVersion>
-              <txtFileVersion>${TAG_NAME:-v$VERSION}</txtFileVersion>
-              <productVersion>${VERSION}.0.0.0</productVersion>
-              <txtProductVersion>${TAG_NAME:-v$VERSION}</txtProductVersion>
+              <fileVersion>$FILE_VERSION</fileVersion>
+              <txtFileVersion>$TXT_VERSION</txtFileVersion>
+              <productVersion>$FILE_VERSION</productVersion>
+              <txtProductVersion>$TXT_VERSION</txtProductVersion>
               <fileDescription>WsProxy Application</fileDescription>
               <copyright>Copyright (c) 2023</copyright>
               <productName>WsProxy</productName>
@@ -239,7 +265,7 @@ jobs:
           </launch4jConfig>
           EOF
 
-            echo "✅ 使用 headless 模式运行 launch4j.jar 生成 $exe_output"
+            echo "✅ 使用 headless 模式生成 $exe_output (版本: $FILE_VERSION)"
             java -Djava.awt.headless=true -jar /tmp/launch4j/launch4j.jar "$config_file"
 
             if [ -f "$exe_output" ]; then
