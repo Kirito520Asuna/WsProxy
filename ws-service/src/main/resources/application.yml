@@ -5,7 +5,7 @@ server:
 
 spring:
   application:
-    name: ws-proxy-service
+    name: ws-proxy
   config:
     import:
       - optional:file:./application-prod.yml
