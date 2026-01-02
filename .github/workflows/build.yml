@@ -29,7 +29,7 @@ on:
         required: true
         default: '8'
       jar_dir_prefix:
-        description: 'JAR 文件前缀 (如 micro-service 或留空)'
+        description: 'JAR 文件前缀 (如 ws-service 或留空)'
         default: ''
       draft:
         description: '是否为草稿 Release (true/false)'
@@ -41,6 +41,11 @@ on:
         default: false
       push_to_registry:
         description: '是否推送到镜像仓库'
+        required: true
+        type: boolean
+        default: true
+      push_to_github_release:
+        description: '是否推送到Github Release'
         required: true
         type: boolean
         default: true
@@ -75,19 +80,31 @@ jobs:
 
       - name: 3.设置输入值
         run: |
+          
+          AUTO=false
+          
           TAG_NAME="${{ github.event.inputs.tag_name || github.ref_name }}"
+          # 判断是否为自动触发（TAG_NAME以'v'开头）
+          if [[ "$TAG_NAME" == v* ]]; then
+              AUTO=true
+          fi
+          echo "AUTO=$AUTO" >> $GITHUB_ENV
           SKIP_TESTS="${{ github.event.inputs.skip_tests || true }}"
           JAVA_VERSION="${{ github.event.inputs.java_version ||secrets.JAVA_VERSION|| '8' }}"
           JAR_DIR_PREFIX="${{ github.event.inputs.jar_dir_prefix || 'ws-service' }}"
           DRAFT="${{ github.event.inputs.draft || false }}"
-          PRERELEASE="${{ github.event.inputs.prerelease || false }}"
+          PRERELEASE="${{ github.event.inputs.prerelease || false }}" 
+          PUSH_TO_REGISTRY="${{ github.event.inputs.push_to_registry  || $AUTO }}"
+          PUSH_TO_GITHUB_RELEASE="${{ github.event.inputs.push_to_github_release  || $AUTO  }}"
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
           echo "SKIP_TESTS=$SKIP_TESTS" >> $GITHUB_ENV
           echo "JAVA_VERSION=$JAVA_VERSION" >> $GITHUB_ENV
           echo "JAR_DIR_PREFIX=$JAR_DIR_PREFIX" >> $GITHUB_ENV
           echo "DRAFT=$DRAFT" >> $GITHUB_ENV
           echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
-          echo "设置的输入值: TAG_NAME=$TAG_NAME, SKIP_TESTS=$SKIP_TESTS, JAVA_VERSION=$JAVA_VERSION, JAR_DIR_PREFIX=$JAR_DIR_PREFIX, DRAFT=$DRAFT, PRERELEASE=$PRERELEASE"
+          echo "PUSH_TO_REGISTRY=$PUSH_TO_REGISTRY" >> $GITHUB_ENV
+          echo "PUSH_TO_GITHUB_RELEASE=$PUSH_TO_GITHUB_RELEASE" >> $GITHUB_ENV
+          echo "设置的输入值: TAG_NAME=$TAG_NAME, SKIP_TESTS=$SKIP_TESTS, JAVA_VERSION=$JAVA_VERSION, JAR_DIR_PREFIX=$JAR_DIR_PREFIX, DRAFT=$DRAFT, PRERELEASE=$PRERELEASE,PUSH_TO_REGISTRY=$PUSH_TO_REGISTRY,PUSH_TO_GITHUB_RELEASE=$PUSH_TO_GITHUB_RELEASE"
 
       - name: 4.验证版本号
         run: |
@@ -162,13 +179,74 @@ jobs:
           echo "解压后的文件:"
           ls -la extracted-jars
 
+      - name: 11.5 将 JAR 文件转换为 EXE
+        run: |
+            # 安装 Launch4j
+            sudo apt-get update
+            sudo apt-get install -y launch4j
+        
+            # 创建 EXE 生成脚本
+            for jar_file in extracted-jars/*.jar; do
+              if [ -f "$jar_file" ]; then
+                jar_name=$(basename "$jar_file" .jar)
+            
+                # 从 JAR 的 MANIFEST.MF 中提取主类
+                main_class=$(unzip -p "$jar_file" META-INF/MANIFEST.MF | grep "Main-Class" | cut -d' ' -f2 | tr -d '\r\n')
+            
+                if [ -n "$main_class" ]; then
+                  config_file="/tmp/${jar_name}_launch4j.xml"
+            
+                  # 创建 Launch4j 配置
+                  cat > "$config_file" << EOF
+                  <launch4jConfig>
+                    <headerType>gui</headerType>
+                    <jar>$jar_file</jar>
+                    <outfile>extracted-jars/${jar_name}.exe</outfile>
+                    <classPath>
+                      <mainClass>$main_class</mainClass>
+                    </classPath>
+                    <jre>
+                      <minVersion>${{ env.JAVA_VERSION }}.0</minVersion>
+                    </jre>
+                    <versionInfo>
+                      <fileVersion>${TAG_NAME#v}</fileVersion>
+                      <txtFileVersion>${TAG_NAME}</txtFileVersion>
+                      <fileDescription>WsProxy Application</fileDescription>
+                      <copyright>Copyright (c) 2023</copyright>
+                      <productVersion>${TAG_NAME#v}</productVersion>
+                      <txtProductVersion>${TAG_NAME}</txtProductVersion>
+                      <productName>WsProxy</productName>
+                    </versionInfo>
+                  </launch4jConfig>
+                  EOF
+            
+                  # 生成 EXE
+                  launch4jc "$config_file"
+            
+                  if [ -f "extracted-jars/${jar_name}.exe" ]; then
+                    echo "✅ 成功创建 EXE: extracted-jars/${jar_name}.exe"
+                  else
+                    echo "❌ 创建 EXE 失败: $jar_file"
+                  fi
+                else
+                  echo "⚠️ 无法从 $jar_file 中提取主类，跳过 EXE 生成"
+                fi
+              fi
+            done
+            
+            echo "生成的 EXE 文件:"
+            ls -la extracted-jars/*.exe
+        shell: bash
+
       - name: 12.上传 ZIP 到 GitHub Release
         uses: softprops/action-gh-release@v2
+        if: ${{ inputs.push_to_github_release == true  }}
         with:
           name: ${{ env.TAG_NAME }}
           files: |
             jars-${{ env.TAG_NAME }}.zip
             extracted-jars/*.jar
+            extracted-jars/*.exe
           tag_name: ${{ env.TAG_NAME }}
           body: |
             **Release 信息**
@@ -187,6 +265,11 @@ jobs:
         with:
           name: jar-files
           path: extracted-jars/*.jar
+      - name: Upload EXE files as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: exe-files
+          path: extracted-jars/*.exe
 
   build-and-push:
     runs-on: ubuntu-latest
