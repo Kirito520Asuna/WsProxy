@@ -20,11 +20,13 @@ ws:
   access-token-name: access-token   
 ```
 ### 3. 运行
+#### 1.windows exe 直接运行
+前往 [release](https://github.com/Kirito520Asuna/WsProxy/releases) 下载 带windows的zip包解压运行.exe文件即可
+#### 2.java
 ```shell
-java -jar ws-proxy.jar
+java -jar xxxx.jar
 ```
-## 部署
-### docker
+#### 3.部署docker
 ```shell
 docker pull ghcr.io/kirito520asuna/wsproxy:latest
 docker run -d -p 8081:8081 -v /path/to/application-prod.yml:/app/application-prod.yml --name wsproxy ghcr.io/kirito520asuna/wsproxy:latest
