@@ -179,7 +179,7 @@ jobs:
           echo "解压后的文件:"
           ls -la extracted-jars
 
-      - name: 11.5 将 JAR 文件转换为 EXE（headless launch4j.jar 版本 - console 模式，最终版）
+      - name: 12. 将 JAR 文件转换为 EXE（console 模式，输出到同一文件夹）
         run: |
           # 下载 Launch4j
           wget --tries=5 --timeout=60 \
@@ -188,28 +188,23 @@ jobs:
           wget --tries=5 \
             https://sourceforge.net/projects/launch4j/files/launch4j-3/3.50/launch4j-3.50-linux-x64.tgz/download \
             -O /tmp/launch4j.tgz
-
+          
           tar -xzf /tmp/launch4j.tgz -C /tmp
-
-          # 只安装必要的 32-bit MinGW 工具链（不再安装 libstdc++6:i386 或 libc6-i386）
+          
+          # 安装 32-bit MinGW 工具链
           sudo apt-get update
           sudo apt-get install -y mingw-w64 g++-mingw-w64-i686 gcc-mingw-w64-i686 binutils-mingw-w64-i686
-
-          # 用系统 32-bit MinGW 工具替换 Launch4j 内置的（关键修复 ldscripts 问题）
+          
+          # 替换内置工具，解决 ldscripts 问题
           ln -sf /usr/bin/i686-w64-mingw32-windres /tmp/launch4j/bin/windres
           ln -sf /usr/bin/i686-w64-mingw32-ld /tmp/launch4j/bin/ld
-
-          dir=$(pwd)
-          cd /tmp/launch4j && echo "解压文件列表:" && ls && cd "$dir"
-
-          # 版本净化处理
+          
+          # 版本净化（支持 v0.0.1-dev 等）
           RAW_TAG=${TAG_NAME#v}
           RAW_TAG=${RAW_TAG:-0.0.1}
-          CLEAN_VERSION=$(echo "$RAW_TAG" | sed 's/[^0-9.]//g')
-          CLEAN_VERSION=$(echo "$CLEAN_VERSION" | sed 's/^\.*//; s/\.*$//; s/\.\.+/\./g')
+          CLEAN_VERSION=$(echo "$RAW_TAG" | sed 's/[^0-9.]//g' | sed 's/^\.*//; s/\.*$//; s/\.\.+/\./g')
           CLEAN_VERSION=${CLEAN_VERSION:-0.0.1}
-          echo "🛠️ 原始 TAG: $TAG_NAME → 净化后版本字符串: $CLEAN_VERSION"
-
+          
           IFS='.' read -r -a parts <<< "$CLEAN_VERSION"
           major=${parts[0]:-0}
           minor=${parts[1]:-0}
@@ -218,22 +213,26 @@ jobs:
           FILE_VERSION="$major.$minor.$patch.$build"
           TXT_VERSION="${TAG_NAME:-v$major.$minor.$patch}"
           echo "🛠️ 版本处理: FileVersion=$FILE_VERSION, TxtVersion=$TXT_VERSION"
-
-          for jar_file in extracted-jars/*.jar; do
-            [ -f "$jar_file" ] || continue
+          
+          # 切换到 extracted-jars 目录运行（关键！确保输出到正确位置）
+          cd extracted-jars
+          echo "已切换到 $(pwd)，开始转换所有 JAR 为 EXE"
+          
+          for jar_file in *.jar; do
+            [ -f "$jar_file" ] || { echo "❌ 未找到任何 JAR 文件"; exit 1; }
             jar_name=$(basename "$jar_file" .jar)
-            exe_output="extracted-jars/${jar_name}.exe"
-
+            exe_file="${jar_name}.exe"
+          
             main_class=$(unzip -p "$jar_file" META-INF/MANIFEST.MF | grep '^Main-Class:' | sed 's/^Main-Class: *//' | tr -d '\r')
             [ -z "$main_class" ] && echo "⚠️ $jar_file 无 Main-Class，跳过" && continue
-
-            config_file="/tmp/${jar_name}_config.xml"
+          
+            config_file="/tmp/launch4j_${jar_name}_config.xml"
             cat > "$config_file" << EOF
           <launch4jConfig>
             <dontWrapJar>false</dontWrapJar>
-            <headerType>console</headerType>    <!-- console 模式：运行时显示黑窗口，适合需要日志输出的程序 -->
+            <headerType>console</headerType>
             <jar>$jar_file</jar>
-            <outfile>$exe_output</outfile>
+            <outfile>$exe_file</outfile>
             <errTitle>WsProxy Error</errTitle>
             <classPath>
               <mainClass>$main_class</mainClass>
@@ -255,29 +254,27 @@ jobs:
             </versionInfo>
           </launch4jConfig>
           EOF
-
-            echo "✅ 使用 headless 模式生成 $exe_output (版本: $FILE_VERSION, console 模式)"
+          
+            echo "✅ 正在生成 $exe_file (console 模式，版本 $FILE_VERSION)"
             java -Djava.awt.headless=true -jar /tmp/launch4j/launch4j.jar "$config_file"
-
-            if [ -f "$exe_output" ]; then
-              echo "✅ 成功生成: $exe_output"
-              echo "   文件大小: $(du -h "$exe_output" | cut -f1)"
+          
+            if [ -f "$exe_file" ]; then
+              echo "🎉 成功生成 EXE: $exe_file"
+              du -h "$exe_file"
             else
               echo "❌ 生成失败: $jar_file"
-              echo "=== 配置内容（调试）==="
-              cat "$config_file"
-              echo "=== Launch4j 日志（如果有）==="
-              cat /tmp/launch4j/launch4j.log 2>/dev/null || echo "无日志文件"
+              cat /tmp/launch4j/launch4j.log 2>/dev/null || echo "无详细日志"
             fi
           done
-
-          echo "=== 生成的 EXE 文件 ==="
-          ls -la extracted-jars/*.exe || echo "未生成任何 EXE"
-
-          rm -rf /tmp/launch4j /tmp/launch4j.tgz /tmp/*_config.xml
+          
+          echo "=== extracted-jars 目录最终内容 ==="
+          ls -lh
+          
+          # 清理临时文件
+          rm -rf /tmp/launch4j /tmp/launch4j.tgz /tmp/launch4j_*_config.xml
         shell: bash
 
-      - name: 12.上传 ZIP 到 GitHub Release
+      - name: 13.上传 ZIP 到 GitHub Release
         uses: softprops/action-gh-release@v2
         if: ${{ inputs.push_to_github_release == true  }}
         with:
@@ -298,7 +295,7 @@ jobs:
           prerelease: ${{ env.PRERELEASE == true || false }}
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
-      # 在步骤 12 之后添加新的 artifact 上传步骤
+      # 在步骤 之后添加新的 artifact 上传步骤
       - name: Upload JAR files as artifact
         uses: actions/upload-artifact@v4
         with:
