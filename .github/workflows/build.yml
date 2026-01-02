@@ -179,9 +179,10 @@ jobs:
           echo "解压后的文件:"
           ls -la extracted-jars
 
-      - name: 11.5 将 JAR 文件转换为 EXE（headless launch4j.jar 版本）
+
+      - name: 11.5 将 JAR 文件转换为 EXE（headless launch4j.jar 版本 - 修复 3.50 兼容）
         run: |
-          # 可靠下载 Launch4j（带重试）
+          # 下载和准备（不变）
           wget --tries=5 --timeout=60 \
             https://pilotfiber.dl.sourceforge.net/project/launch4j/launch4j-3/3.50/launch4j-3.50-linux-x64.tgz?viasf=1 \
             -O /tmp/launch4j.tgz || \
@@ -190,16 +191,11 @@ jobs:
             -O /tmp/launch4j.tgz
 
           tar -xzf /tmp/launch4j.tgz -C /tmp
-
-          # 安装 mingw-w64（提供 windres 和 ld）
           sudo apt-get update
           sudo apt-get install -y mingw-w64
-
-          # 创建 Launch4j 所需的符号链接（x86_64-w64-mingw32- 前缀）
           ln -sf /usr/bin/x86_64-w64-mingw32-windres /tmp/launch4j/bin/windres
           ln -sf /usr/bin/x86_64-w64-mingw32-ld /tmp/launch4j/bin/ld
 
-          # 设置版本 fallback（可选）
           VERSION=${TAG_NAME#v}
           VERSION=${VERSION:-1.0.0}
 
@@ -219,11 +215,13 @@ jobs:
             cat > "$config_file" << EOF
           <launch4jConfig>
             <dontWrapJar>false</dontWrapJar>
-            <headerType>console</headerType>    <!-- WsProxy 如为 GUI 程序用 gui；如为控制台程序用 console -->
+            <headerType>console</headerType>    <!-- 根据 WsProxy 实际类型：gui（无控制台窗口） 或 console -->
             <jar>$jar_file</jar>
             <outfile>$exe_output</outfile>
             <errTitle>WsProxy Error</errTitle>
-            <classname>$main_class</classname>
+            <classPath>
+              <mainClass>$main_class</mainClass>
+            </classPath>
             <jre>
               <minVersion>${{ env.JAVA_VERSION }}.0</minVersion>
               <jdkPreference>preferJre</jdkPreference>
@@ -258,7 +256,6 @@ jobs:
           echo "=== 生成的 EXE 文件 ==="
           ls -la extracted-jars/*.exe || echo "未生成任何 EXE"
 
-          # 清理（可选）
           rm -rf /tmp/launch4j /tmp/launch4j.tgz /tmp/*_config.xml
         shell: bash
 
