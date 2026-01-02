@@ -193,7 +193,7 @@ jobs:
           cd $dir
           # 添加执行权限
           chmod +x /tmp/launch4j/launch4j
-
+          echo "完成权限赋予:"
           # 遍历所有 JAR 文件
           for jar_file in extracted-jars/*.jar; do
             if [ -f "$jar_file" ]; then
@@ -233,7 +233,7 @@ jobs:
             </versionInfo>
           </launch4jConfig>
           EOF
-
+              echo "执行 Launch4j 生成 EXE"
               # 执行 Launch4j 生成 EXE
               /tmp/launch4j/launch4j "$config_file"
 
